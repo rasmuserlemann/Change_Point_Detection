@@ -1,0 +1,49 @@
+library(twosamples)
+library(rGammaGamma)
+
+#number of iterations in calculating power
+vvv = 800
+
+#significance level
+sig = 0.1
+
+#sample size
+n = 100
+
+count2 = 0
+
+for (ooo in 1:vvv){
+
+#we draw a sample from the alternative distribution
+d = c(rgamma(as.integer(0.3*n), shape = 0.5, scale = 0.5), rgamma(as.integer(0.3*n), shape = 50, scale = 100), rgamma(as.integer(0.4*n), shape = 0.5, scale = 0.5))
+
+#number of iterations to calculate p-value
+mmm = 500
+
+#MLEs of the generated data d
+MLE1 = as.numeric(gammaMLE(d)[1])
+MLE2 = as.numeric(gammaMLE(d)[2])
+  
+CO = 0
+for (c in 1:(n-1)){
+  CO = CO + cvm_stat(d[1:c], d[c+1:n], power = 2)
+}
+
+C = c()
+for (pp in 1:mmm){
+  s = rgamma(n, shape = MLE1, scale = MLE2)
+  total = 0
+  for (c in 1:(n-1)){
+    total = total + cvm_stat(s[1:c], s[c+1:n], power = 2)
+  }
+  C[pp] = total
+}
+
+condpvalue = length(C[C > CO])/length(C)
+if (condpvalue < sig){
+  count2 = count2 + 1
+}
+}
+print("W bar power is")
+print(100*count2/vvv)
+
