@@ -14,6 +14,10 @@ count2 = 0
 
 for (ooo in 1:vvv){
 
+if (ooo %% (vvv/10) == 0){
+    cat(ooo/vvv*(100), "percentage finished\n")
+  }  
+
 #we draw a sample from the alternative distribution
 d = c(rgamma(as.integer(0.3*n), shape = 0.5, scale = 0.5), rgamma(as.integer(0.3*n), shape = 50, scale = 100), rgamma(as.integer(0.4*n), shape = 0.5, scale = 0.5))
 
@@ -44,6 +48,5 @@ if (condpvalue < sig){
   count2 = count2 + 1
 }
 }
-print("W bar power is")
-print(100*count2/vvv)
+cat("W bar power is", 100*count2/vvv)
 
