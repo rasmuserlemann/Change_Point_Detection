@@ -1,0 +1,52 @@
+library(twosamples)
+library(fitdistrplus)
+
+#number of iterations in calculating power
+vvv = 1200
+
+#significance level
+sig = 0.1
+
+#sample size
+n = 100
+
+count2 = 0
+
+for (ooo in 1:vvv){
+
+if (ooo %% (vvv/10) == 0){
+  cat(ooo/vvv*(100), "percentage finished\n")
+}  
+  
+#we draw a sample from the alternative distribution
+  d = c(rnorm(as.integer(0.5*n), 0, 1), rnorm(as.integer(0.5*n), 0, 3))
+  
+#number of iterations to calculate p-value
+mmm = 800
+
+#MLEs of the generated data d
+MLE1 = as.numeric(mledist(d,"norm")$estimate[1])
+MLE2 = as.numeric(mledist(d,"norm")$estimate[2])
+  
+COvec = c()
+for (c in 1:(n-1)){
+  COvec = c(COvec, cvm_stat(d[1:c], d[c+1:n], power = 2))
+}
+CO = max(COvec)
+
+C = c()
+for (pp in 1:mmm){
+  s = rgamma(n, shape = MLE1, scale = MLE2)
+  total = c()
+  for (c in 1:(n-1)){
+    total = c(total, cvm_stat(s[1:c], s[c+1:n], power = 2))
+  }
+  C[pp] = max(total)
+}
+
+condpvalue = length(C[C > CO])/length(C)
+if (condpvalue < sig){
+  count2 = count2 + 1
+}
+}
+cat("W max power is", 100*count2/vvv)
