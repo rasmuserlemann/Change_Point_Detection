@@ -8,7 +8,7 @@ vvv = 1200
 sig = 0.1
 
 #sample size
-n = 100
+n = 10
 
 count2 = 0
 
@@ -36,7 +36,7 @@ CO = max(COvec)
 
 C = c()
 for (pp in 1:mmm){
-  s = rgamma(n, shape = MLE1, scale = MLE2)
+  s = rnorm(n, MLE1, MLE2)
   total = c()
   for (c in 1:(n-1)){
     total = c(total, cvm_stat(s[1:c], s[c+1:n], power = 2))
