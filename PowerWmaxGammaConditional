@@ -1,0 +1,160 @@
+library(rGammaGamma)
+
+chi = function(u, alpha, beta){
+  return((u/beta)^alpha)
+}
+
+#Equation to find alphahat
+alphahat = function(alpha, u, t1, t2){
+  beta = exp((sum(log(u))-t2/alpha)/n)
+  value = (sum((u/beta)^alpha)-t1)
+  return(value)
+}
+
+#Betahat depends on alphahat 
+betahat = function(alphahat, u, t2){
+  value = exp((sum(log(u))-t2/alphahat)/n)
+  return(value)
+}
+
+prior = function(alpha, beta){
+  return(1)
+  if (alpha > 0.5 && alpha < 1.5 && beta > 0.5 && beta < 1.5){
+    value = 1
+  }
+  else {
+    value = 0
+  }
+  return(value)
+}
+
+h = function(u, alpha, beta, t1, t2){
+  pri = prior(alpha,beta)
+  deriv = (1/beta)*(t1*t2-n*sum(((u/beta)^alpha)*log((u/beta)^alpha)))
+  fcond = ((alpha/beta)^n)*exp((1-1/alpha)*t2)
+  value = abs(fcond*pri/deriv)
+  return(value)
+}
+
+#The halving algorithm
+half = function(u, t1, t2){
+  e = 10^(-3)
+  A = 0.1
+  B = 2
+  while (alphahat(A, u, t1, t2) > 0){
+    A = A/2
+  }
+  while(alphahat(B, u, t1, t2) < 0){
+    B = B*2
+  }
+  C = (A+B)/2
+  while (abs(alphahat(C, u, t1, t2)) > e){
+    C = (A+B)/2
+    if (alphahat(A, u, t1, t2)*alphahat(C, u, t1, t2) > 0){
+      A = C
+    }
+    else {
+      B = C
+    }
+  }
+  return(C)
+}
+
+wmax = function(x){
+  n=length(x)
+  MD=outer(x,x,"-")
+  MD[MD>=0]=1
+  MD[MD<0]=0
+  N=matrix(0,nrow=n,ncol=n-1)
+  I=1:n
+  Cee=1:(n-1)
+  ND=outer(I,Cee,"-")
+  N[ND <= 0]=1
+  One.n = rep(1,n)
+  One.nm1 = rep(1,n-1)
+  F.mat=MD%*%N*outer(One.n,1/Cee)
+  G.mat=MD%*%(1-N)*outer(One.n,1/(n-Cee))
+  MR = outer(One.n,Cee*(n-Cee))
+  w.vec=apply(MR*(F.mat-G.mat)^2/n^2,2,sum)
+  max(w.vec)
+}
+
+condsample = function(data, iter){
+  t1 = sum(data)
+  t2 = sum(log(data))
+  n = length(data)
+  MLEa = as.numeric(gammaMLE(data)[1])
+  MLEb = as.numeric(gammaMLE(data)[2])
+
+  xmetrop[1] = list(rgamma(n, shape = MLEa, scale = MLEb))
+  alphah = c()
+  betah = c()
+  alphah[1] = half(unlist(xmetrop[1]), t1, t2)
+  betah[1] = betahat(alphah[1], unlist(xmetrop[1]), t2)
+  while (h(unlist(xmetrop[1]), alphah[1], betah[1], t1, t2)==0){
+    xmetrop[1] = list(rgamma(n, shape = MLEa, scale = MLEb))
+    alphah[1] = half(unlist(xmetrop[1]), t1, t2)
+    betah[1] = betahat(alphah[1], unlist(xmetrop[1]), t2)
+  }
+  for (i in 1:iter){
+    unif2 = runif(1)
+    unif1 = rgamma(n, shape=MLEa, scale=MLEb)
+    alphah[i+1] = half(unif1, t1, t2)
+    betah[i+1] = betahat(alphah[i+1], unif1, t2)
+    up = h(unif1, alphah[i+1], betah[i+1], t1, t2)*prod(dgamma(unlist(xmetrop[i]), shape=MLEa, scale=MLEb))
+    down = h(unlist(xmetrop[i]), alphah[i], betah[i], t1, t2)*prod(dgamma(unif1, shape=MLEa, scale=MLEb))
+    alpha = up/down
+    if (unif2 <= alpha){
+      xmetrop[i+1] = list(unif1)
+    }
+    else{
+      alphah[i+1] = alphah[i]
+      betah[i+1] = betah[i]
+      xmetrop[i+1] = xmetrop[i]
+    }
+    if (i == iter){
+      return(chi(unlist(xmetrop[i]), alphah[i], betah[i]))
+    }
+  }
+}
+
+
+
+#number of iterations in calculating power
+vvv = 1200
+
+#significance level
+sig = 0.05
+
+#sample size
+n = 50
+
+count2 = 0
+
+for (ooo in 1:vvv){
+  
+  if (ooo %% (vvv/10) == 0){
+    cat(ooo/vvv*(100), "percentage finished\n")
+  }  
+  
+  #we draw a sample from the alternative distribution
+  d = c(rgamma(as.integer(0.7*n), shape = 1, scale = 2), rgamma(as.integer(0.3*n), shape = 2, scale = 3))
+  
+  #number of iterations to calculate p-value
+  mmm = 800
+
+  obs = wmax(d)
+  
+  C = c()
+  for (pp in 1:mmm){
+    s = condsample(d, iter=5)
+    C[pp] = wmax(s)
+  }
+  
+  condpvalue = length(C[C > obs])/length(C)
+  if (condpvalue < sig){
+    count2 = count2 + 1
+  }
+}
+cat("W max power is", 100*count2/vvv)
+
