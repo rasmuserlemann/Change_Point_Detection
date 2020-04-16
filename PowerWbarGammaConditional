@@ -1,4 +1,3 @@
-library(twosamples)
 library(rGammaGamma)
 
 chi = function(u, alpha, beta){
@@ -59,6 +58,24 @@ half = function(u, t1, t2){
     }
   }
   return(C)
+}
+
+wbar = function(x){
+  n=length(x)
+  MD=outer(x,x,"-")
+  MD[MD>=0]=1
+  MD[MD<0]=0
+  N=matrix(0,nrow=n,ncol=n-1)
+  I=1:n
+  Cee=1:(n-1)
+  ND=outer(I,Cee,"-")
+  N[ND <= 0]=1
+  One.n = rep(1,n)
+  One.nm1 = rep(1,n-1)
+  F.mat=MD%*%N*outer(One.n,1/Cee)
+  G.mat=MD%*%(1-N)*outer(One.n,1/(n-Cee))
+  MR = outer(One.n,Cee*(n-Cee))
+  sum(MR*(F.mat-G.mat)^2)/(n^2*(n-1))
 }
 
 condsample = function(data, iter){
@@ -125,24 +142,18 @@ for (ooo in 1:vvv){
   #number of iterations to calculate p-value
   mmm = 800
 
-  CO = 0
-  for (c in 1:(n-1)){
-    CO = CO + cvm_stat(d[1:c], d[c+1:n], power = 2)
-  }
+  obs = wbar(d)
   
   C = c()
   for (pp in 1:mmm){
     s = condsample(d, iter=5)
-    total = 0
-    for (c in 1:(n-1)){
-      total = total + cvm_stat(s[1:c], s[c+1:n], power = 2)
-    }
-    C[pp] = total
+    C[pp] = wbar(s)
   }
   
-  condpvalue = length(C[C > CO])/length(C)
+  condpvalue = length(C[C > obs])/length(C)
   if (condpvalue < sig){
     count2 = count2 + 1
   }
 }
 cat("W bar power is", 100*count2/vvv)
+
