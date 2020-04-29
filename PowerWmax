@@ -1,0 +1,57 @@
+wmax = function(x){
+  n=length(x)
+  MD=outer(x,x,"-")
+  MD[MD>=0]=1
+  MD[MD<0]=0
+  N=matrix(0,nrow=n,ncol=n-1)
+  I=1:n
+  Cee=1:(n-1)
+  ND=outer(I,Cee,"-")
+  N[ND <= 0]=1
+  One.n = rep(1,n)
+  One.nm1 = rep(1,n-1)
+  F.mat=MD%*%N*outer(One.n,1/Cee)
+  G.mat=MD%*%(1-N)*outer(One.n,1/(n-Cee))
+  MR = outer(One.n,Cee*(n-Cee))
+  w.vec=apply(MR*(F.mat-G.mat)^2/n^2,2,sum)
+  max(w.vec)
+}
+
+#sample size
+n = 20
+
+mmm = 100000
+C = c()
+for (pp in 1:mmm){
+  if (pp %% (mmm/10) == 0){
+    cat(pp/mmm*(100), "percentage finished\n")
+  }  
+  s = runif(n)
+  C[pp] = wmax(s)
+}
+
+#number of iterations in calculating power
+vvv = 100000
+
+#significance level
+sig = 0.1
+
+count2 = 0
+
+for (ooo in 1:vvv){
+  
+  if (ooo %% (vvv/10) == 0){
+    cat(ooo/vvv*(100), "percentage finished\n")
+  }  
+  
+  #we draw a sample from the alternative distribution
+  d = c(rgamma(as.integer(0.4*n), shape = 1, scale = 2), rnorm(as.integer(0.2*n), 2, 3))
+  d = c(d, rgamma(as.integer(0.4*n), shape = 1, scale = 2))
+  obs = wmax(d)
+  
+  condpvalue = length(C[C > obs])/length(C)
+  if (condpvalue < sig){
+    count2 = count2 + 1
+  }
+}
+cat("W max power is", 100*count2/vvv)
